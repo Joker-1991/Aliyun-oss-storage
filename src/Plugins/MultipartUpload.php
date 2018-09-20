@@ -15,15 +15,11 @@ class MultipartUpload extends AbstractPlugin
      */
     public function getMethod()
     {
-        return 'MultipartUpload';
+        return 'multipartUpload';
     }
 
-    public function handle($path, $filePath)
+    public function handle($path, $file)
     {
-        if ( ! $this->filesystem->getAdapter()->has($path)) {
-            throw new FileNotFoundException($path.' not found');
-        }
-
-        return $this->filesystem->getAdapter()->getClient()->MultipartUpload($path, $filePath);
+        return $this->filesystem->getAdapter()->MultipartUpload($path, $file);
     }
 }

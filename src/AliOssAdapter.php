@@ -16,6 +16,7 @@ use OSS\Core\OssException;
 use OSS\OssClient;
 use Log;
 use Symfony\Component\Filesystem\Exception\FileNotFoundException;
+use OSS\Core\OssUtil;
 
 class AliOssAdapter extends AbstractAdapter
 {
@@ -711,7 +712,7 @@ class AliOssAdapter extends AbstractAdapter
      * @param $path
      * @param $filePath
      */
-    public function MultipartUpload($path, $filePath)
+    public function multipartUpload($path, $file)
     {
         $bucket    = $this->bucket;
         $object    = $this->applyPathPrefix($path);
@@ -727,7 +728,7 @@ class AliOssAdapter extends AbstractAdapter
 
         // multipart upload
         $partSize           = 10 * 1024 * 1024;
-        $uploadFileSize     = filesize($filePath);
+        $uploadFileSize     = filesize($file);
         $pieces             = $this->client->generateMultiuploadParts($uploadFileSize, $partSize);
         $responseUploadPart = array();
         $uploadPosition     = 0;
@@ -736,7 +737,7 @@ class AliOssAdapter extends AbstractAdapter
             $fromPos   = $uploadPosition + (integer) $piece[$ossClient::OSS_SEEK_TO];
             $toPos     = (integer) $piece[$ossClient::OSS_LENGTH] + $fromPos - 1;
             $upOptions = array(
-                $ossClient::OSS_FILE_UPLOAD => $filePath,
+                $ossClient::OSS_FILE_UPLOAD => $file,
                 $ossClient::OSS_PART_NUM    => ( $i + 1 ),
                 $ossClient::OSS_SEEK_TO     => $fromPos,
                 $ossClient::OSS_LENGTH      => $toPos - $fromPos + 1,
@@ -744,7 +745,7 @@ class AliOssAdapter extends AbstractAdapter
             );
             // MD5
             if ($isCheckMd5) {
-                $contentMd5                             = OssUtil::getMd5SumForFile($filePath, $fromPos, $toPos);
+                $contentMd5                             = OssUtil::getMd5SumForFile($file, $fromPos, $toPos);
                 $upOptions[$ossClient::OSS_CONTENT_MD5] = $contentMd5;
             }
             try {
