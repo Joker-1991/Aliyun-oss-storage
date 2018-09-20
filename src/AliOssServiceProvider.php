@@ -2,6 +2,7 @@
 
 namespace Jacobcyl\AliOSS;
 
+use Jacobcyl\AliOSS\Plugins\MultipartUpload;
 use Jacobcyl\AliOSS\Plugins\PutFile;
 use Jacobcyl\AliOSS\Plugins\PutRemoteFile;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,7 @@ class AliOssServiceProvider extends ServiceProvider
             
             $filesystem->addPlugin(new PutFile());
             $filesystem->addPlugin(new PutRemoteFile());
+            $filesystem->addPlugin(new MultipartUpload());
             //$filesystem->addPlugin(new CallBack());
             return $filesystem;
         });
