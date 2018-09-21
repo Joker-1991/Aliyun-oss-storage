@@ -78,6 +78,10 @@ class AliOssAdapter extends AbstractAdapter
 
     protected $isCname;
 
+    protected $callbackJson;
+
+    protected $callbackVar;
+
     //配置
     protected $options = [
         'Multipart' => 128
@@ -87,11 +91,14 @@ class AliOssAdapter extends AbstractAdapter
      * AliOssAdapter constructor.
      *
      * @param OssClient $client
-     * @param string    $bucket
-     * @param string    $endPoint
-     * @param bool      $ssl
+     * @param           $bucket
+     * @param           $endPoint
+     * @param           $ssl
      * @param bool      $isCname
      * @param bool      $debug
+     * @param           $cdnDomain
+     * @param null      $callbackJson
+     * @param null      $callbackVar
      * @param null      $prefix
      * @param array     $options
      */
@@ -103,6 +110,8 @@ class AliOssAdapter extends AbstractAdapter
         $isCname = false,
         $debug = false,
         $cdnDomain,
+        $callbackJson = null,
+        $callbackVar = null,
         $prefix = null,
         array $options = []
     ) {
@@ -110,11 +119,13 @@ class AliOssAdapter extends AbstractAdapter
         $this->client = $client;
         $this->bucket = $bucket;
         $this->setPathPrefix($prefix);
-        $this->endPoint  = $endPoint;
-        $this->ssl       = $ssl;
-        $this->isCname   = $isCname;
-        $this->cdnDomain = $cdnDomain;
-        $this->options   = array_merge($this->options, $options);
+        $this->endPoint     = $endPoint;
+        $this->ssl          = $ssl;
+        $this->isCname      = $isCname;
+        $this->cdnDomain    = $cdnDomain;
+        $this->options      = array_merge($this->options, $options);
+        $this->callbackJson = $callbackJson;
+        $this->callbackVar  = $callbackVar;
     }
 
     /**
@@ -712,7 +723,7 @@ class AliOssAdapter extends AbstractAdapter
      * @param $path
      * @param $filePath
      */
-    public function multipartUpload($path, $file)
+    public function multipartUpload($path, $filePath)
     {
         $bucket    = $this->bucket;
         $object    = $this->applyPathPrefix($path);
@@ -725,10 +736,10 @@ class AliOssAdapter extends AbstractAdapter
 
             return;
         }
-
+        print( __FUNCTION__.": initiateMultipartUpload OK"."\n" );
         // multipart upload
         $partSize           = 10 * 1024 * 1024;
-        $uploadFileSize     = filesize($file);
+        $uploadFileSize     = filesize($filePath);
         $pieces             = $this->client->generateMultiuploadParts($uploadFileSize, $partSize);
         $responseUploadPart = array();
         $uploadPosition     = 0;
@@ -737,7 +748,7 @@ class AliOssAdapter extends AbstractAdapter
             $fromPos   = $uploadPosition + (integer) $piece[$ossClient::OSS_SEEK_TO];
             $toPos     = (integer) $piece[$ossClient::OSS_LENGTH] + $fromPos - 1;
             $upOptions = array(
-                $ossClient::OSS_FILE_UPLOAD => $file,
+                $ossClient::OSS_FILE_UPLOAD => $filePath,
                 $ossClient::OSS_PART_NUM    => ( $i + 1 ),
                 $ossClient::OSS_SEEK_TO     => $fromPos,
                 $ossClient::OSS_LENGTH      => $toPos - $fromPos + 1,
@@ -745,15 +756,16 @@ class AliOssAdapter extends AbstractAdapter
             );
             // MD5
             if ($isCheckMd5) {
-                $contentMd5                             = OssUtil::getMd5SumForFile($file, $fromPos, $toPos);
+                $contentMd5                             = OssUtil::getMd5SumForFile($filePath, $fromPos, $toPos);
                 $upOptions[$ossClient::OSS_CONTENT_MD5] = $contentMd5;
             }
             try {
                 // upload
                 $responseUploadPart[] = $ossClient->uploadPart($bucket, $object, $uploadId, $upOptions);
             } catch (OssException $e) {
-                $this->logErr($e);
+                $this->logErr(__FUNCTION__, $e);
             }
+            printf(__FUNCTION__.": initiateMultipartUpload, uploadPart - part#{$i} OK\n");
         }
 
         $uploadParts = array();
@@ -765,12 +777,14 @@ class AliOssAdapter extends AbstractAdapter
         }
 
         // finish
-        try {
-            $ossClient->completeMultipartUpload($bucket, $object, $uploadId, $uploadParts);
-        } catch (OssException $e) {
-            $this->logErr($e);
 
-            return;
-        }
+        $json    = $this->callbackJson;
+        $var     = $this->callbackVar;
+        $options = array(
+            OssClient::OSS_CALLBACK     => $json,
+            OssClient::OSS_CALLBACK_VAR => $var
+        );
+        $ossClient->completeMultipartUpload($bucket, $object, $uploadId, $uploadParts, $options);
+        printf(__FUNCTION__.": completeMultipartUpload OK\n");
     }
 }

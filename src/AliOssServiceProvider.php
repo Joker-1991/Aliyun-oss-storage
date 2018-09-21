@@ -30,31 +30,36 @@ class AliOssServiceProvider extends ServiceProvider
         }
         */
 
-        Storage::extend('oss', function($app, $config)
-        {
+        Storage::extend('oss', function ($app, $config) {
             $accessId  = $config['access_id'];
             $accessKey = $config['access_key'];
 
-            $cdnDomain = empty($config['cdnDomain']) ? '' : $config['cdnDomain'];
-            $bucket    = $config['bucket'];
-            $ssl       = empty($config['ssl']) ? false : $config['ssl']; 
-            $isCname   = empty($config['isCName']) ? false : $config['isCName'];
-            $debug     = empty($config['debug']) ? false : $config['debug'];
+            $cdnDomain    = empty($config['cdnDomain']) ? '' : $config['cdnDomain'];
+            $bucket       = $config['bucket'];
+            $ssl          = empty($config['ssl']) ? false : $config['ssl'];
+            $isCname      = empty($config['isCName']) ? false : $config['isCName'];
+            $debug        = empty($config['debug']) ? false : $config['debug'];
+            $callbackJson = $config['callback_json'];
+            $callbackVar  = $config['callback_var'];
 
-            $endPoint  = $config['endpoint']; // 默认作为外部节点
-            $epInternal= $isCname?$cdnDomain:(empty($config['endpoint_internal']) ? $endPoint : $config['endpoint_internal']); // 内部节点
-            
-            if($debug) Log::debug('OSS config:', $config);
+            $endPoint   = $config['endpoint']; // 默认作为外部节点
+            $epInternal = $isCname ? $cdnDomain : ( empty($config['endpoint_internal']) ? $endPoint : $config['endpoint_internal'] ); // 内部节点
+
+            if ($debug) {
+                Log::debug('OSS config:', $config);
+            }
 
             $client  = new OssClient($accessId, $accessKey, $epInternal, $isCname);
-            $adapter = new AliOssAdapter($client, $bucket, $endPoint, $ssl, $isCname, $debug, $cdnDomain);
+            $adapter = new AliOssAdapter($client, $bucket, $endPoint, $ssl, $isCname, $debug, $cdnDomain, $callbackJson,
+                $callbackVar);
 
             //Log::debug($client);
-            $filesystem =  new Filesystem($adapter);
-            
+            $filesystem = new Filesystem($adapter);
+
             $filesystem->addPlugin(new PutFile());
             $filesystem->addPlugin(new PutRemoteFile());
             $filesystem->addPlugin(new MultipartUpload());
+
             //$filesystem->addPlugin(new CallBack());
             return $filesystem;
         });
