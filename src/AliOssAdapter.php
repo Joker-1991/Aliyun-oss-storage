@@ -736,7 +736,6 @@ class AliOssAdapter extends AbstractAdapter
 
             return;
         }
-        print( __FUNCTION__.": initiateMultipartUpload OK"."\n" );
         // multipart upload
         $partSize           = 10 * 1024 * 1024;
         $uploadFileSize     = filesize($filePath);
@@ -765,7 +764,6 @@ class AliOssAdapter extends AbstractAdapter
             } catch (OssException $e) {
                 $this->logErr(__FUNCTION__, $e);
             }
-            printf(__FUNCTION__.": initiateMultipartUpload, uploadPart - part#{$i} OK\n");
         }
 
         $uploadParts = array();
@@ -784,7 +782,7 @@ class AliOssAdapter extends AbstractAdapter
             OssClient::OSS_CALLBACK     => $json,
             OssClient::OSS_CALLBACK_VAR => $var
         );
-        $ossClient->completeMultipartUpload($bucket, $object, $uploadId, $uploadParts, $options);
-        printf(__FUNCTION__.": completeMultipartUpload OK\n");
+        $result = $ossClient->completeMultipartUpload($bucket, $object, $uploadId, $uploadParts, $options);
+        return $result['body'];
     }
 }

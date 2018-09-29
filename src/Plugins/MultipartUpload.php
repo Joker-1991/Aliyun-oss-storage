@@ -20,6 +20,6 @@ class MultipartUpload extends AbstractPlugin
 
     public function handle($path, $file)
     {
-        return $this->filesystem->getAdapter()->MultipartUpload($path, $file);
+        return $this->filesystem->getAdapter()->multipartUpload($path, $file);
     }
 }
